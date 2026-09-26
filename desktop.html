@@ -1,208 +1,46 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f6f7f9">
+<title>空白文稿编辑器</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232b5cd9'/%3E%3Cg stroke='%23fff' stroke-width='4.5' stroke-linecap='round'%3E%3Cpath d='M17 21h30M17 32h30M17 43h19'/%3E%3C/g%3E%3C/svg%3E">
-
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>空白文稿编辑器 · 桌面版</title>
-<script>
-(function(){
-  if(location.protocol!=="http:"&&location.protocol!=="https:")return;
-  if(new URLSearchParams(location.search).get("mode")==="desktop")return;
-  var ua=navigator.userAgent||"";
-  var mobileUA=/Android|iPhone|iPod|iPad|Mobile|HarmonyOS|Tablet|Windows Phone/i.test(ua);
-  var iPadOS=/Macintosh/.test(ua)&&navigator.maxTouchPoints>1;
-  var uaDataMobile=!!(navigator.userAgentData&&navigator.userAgentData.mobile);
-  var coarse=matchMedia("(pointer: coarse)").matches||matchMedia("(any-pointer: coarse)").matches;
-  var mobile=mobileUA||uaDataMobile||iPadOS||innerWidth<820||
-    (coarse&&Math.min(screen.width||9999,screen.height||9999)<1100);
-  if(mobile)location.replace("mobile.html?rev=blank-editor-1");
-})();
-</script>
-<style>
-:root{
-  --bg:#f4f5f7; --panel:#fff; --line:#e5e7eb; --line2:#eef0f3;
-  --tx:#1f2328; --tx2:#5c6570; --tx3:#8b95a1;
-  --accent:#2b5cd9; --accent-soft:#eaf0ff; --side:322px;
-}
-*{box-sizing:border-box}
-html,body{margin:0;height:100%}
-body{
-  background:var(--bg); color:var(--tx);
-  font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
-  -webkit-font-smoothing:antialiased; overflow:hidden;
-}
-button,input,select{font:inherit;color:inherit}
-button{cursor:pointer;border:0;background:none}
-::-webkit-scrollbar{width:10px;height:10px}
-::-webkit-scrollbar-thumb{background:#c9ced6;border-radius:6px;border:3px solid transparent;background-clip:content-box}
-::-webkit-scrollbar-thumb:hover{background:#aab2bd;background-clip:content-box;border:3px solid transparent}
-
-/* ================= 左侧筛选栏 ================= */
-.side{position:fixed;left:0;top:0;bottom:0;width:var(--side);background:var(--panel);
-  border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:20}
-.brand{padding:18px 20px 14px;border-bottom:1px solid var(--line2)}
-.brand h1{margin:0;font-size:17px;font-weight:700;letter-spacing:.2px}
-.brand .sub{margin-top:6px;font-size:12.5px;color:var(--tx3);line-height:1.75}
-.brand .sub b{color:var(--tx2);font-weight:600}
-.search{padding:14px 18px 10px}
-.search input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;
-  background:#fafbfc;outline:none;transition:.15s}
-.search input[type=text]:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-soft)}
-.search .deep{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:12.5px;color:var(--tx2);cursor:pointer}
-.search .deep input{width:14px;height:14px;margin:0}
-.filters{flex:1;overflow-y:auto;padding:2px 18px 18px;overscroll-behavior:contain}
-.grp{margin-top:15px}
-.grp>h3{margin:0 0 8px;font-size:11.5px;font-weight:700;color:var(--tx3);letter-spacing:.5px;
-  display:flex;justify-content:space-between;align-items:center}
-.grp>h3 .clr{font-weight:500;color:var(--accent);cursor:pointer;font-size:11.5px;visibility:hidden}
-.grp.on>h3 .clr{visibility:visible}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;
-  border:1px solid var(--line);background:#fff;font-size:12.5px;color:var(--tx2);transition:.13s;max-width:100%}
-.chip:hover{border-color:#c3cbd6;background:#fafbfd}
-.chip .n{font-size:11px;color:var(--tx3);font-variant-numeric:tabular-nums}
-.chip.sel{background:var(--accent);border-color:var(--accent);color:#fff}
-.chip.sel .n{color:#c9d8ff}
-.chip.zero{opacity:.34} .chip.zero:hover{border-color:var(--line);background:#fff}
-.chip .dot{width:7px;height:7px;border-radius:50%;flex:none}
-.subchips{max-height:200px;overflow-y:auto;padding-right:4px;margin-right:-4px}
-.subchips .chip{font-size:12px;padding:3px 8px}
-.sfoot{border-top:1px solid var(--line);padding:12px 18px;display:flex;align-items:center;
-  justify-content:space-between;gap:10px;background:#fcfcfd}
-.sfoot .cnt{font-size:13px;color:var(--tx2)}
-.sfoot .cnt b{color:var(--accent);font-size:15px;font-variant-numeric:tabular-nums}
-.btn-ghost{padding:6px 12px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;
-  color:var(--tx2);background:#fff}
-.btn-ghost:hover{border-color:#c3cbd6;color:var(--tx)}
-
-/* ================= 右侧主区 ================= */
-.main{margin-left:var(--side);height:100%;display:flex;flex-direction:column}
-.topbar{display:flex;align-items:center;gap:12px;padding:12px 26px 10px;border-bottom:1px solid var(--line)}
-.topbar .res{font-size:13.5px;color:var(--tx2)}
-.topbar .res b{color:var(--tx);font-size:15px;font-variant-numeric:tabular-nums}
-.topbar .sp{flex:1}
-.topbar label{font-size:12.5px;color:var(--tx3);margin-right:5px}
-.topbar select{padding:5px 9px;border:1px solid var(--line);border-radius:7px;background:#fff;
-  outline:none;font-size:13px}
-.topbar .swapv{display:none;margin-left:8px;font-size:12.5px;color:var(--tx3);text-decoration:none;
-  border-bottom:1px dashed #d5dae1;padding-bottom:1px}
-.topbar .swapv:hover{color:var(--accent);border-color:var(--accent)}
-.crumbs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 26px 0;min-height:0}
-.crumbs .cr{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--accent);
-  background:var(--accent-soft);border-radius:999px;padding:2px 9px;cursor:pointer}
-.crumbs .cr:hover{background:#dbe6ff}
-.listwrap{flex:1;overflow-y:auto;padding:6px 26px 80px;overscroll-behavior:contain}
-.row{display:flex;gap:14px;padding:15px 14px;border-bottom:1px solid var(--line2);cursor:pointer;
-  border-radius:5px;transition:background .12s}
-.row:hover{background:#fff;box-shadow:0 1px 3px rgba(16,24,40,.07)}
-.row .no{width:34px;flex:none;font-size:12px;color:var(--tx3);font-variant-numeric:tabular-nums;padding-top:4px}
-.row .bd{flex:1;min-width:0}
-.row .t{font-size:15.5px;font-weight:600;line-height:1.5}
-.row .m{margin-top:6px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12.5px;color:var(--tx3)}
-.row .m .sep{color:#d9dee5}
-.row .s{margin-top:7px;font-size:13.5px;color:var(--tx2);line-height:1.68;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.bdg{display:inline-block;padding:1px 7px;border-radius:5px;font-size:11.5px;font-weight:500;white-space:nowrap}
-.bdg.soft{background:#f1f3f6;color:#5c6570}
-.bdg.dup{background:#fff3e0;color:#b45309}
-.empty{padding:80px 20px;text-align:center;color:var(--tx3);font-size:14px;line-height:2.1}
-.pager{display:flex;align-items:center;justify-content:center;gap:6px;padding:16px 0 4px;flex-wrap:wrap}
-.pager button{min-width:34px;padding:5px 9px;border:1px solid var(--line);border-radius:7px;
-  background:#fff;font-size:13px;color:var(--tx2)}
-.pager button:hover:not(:disabled){border-color:#c3cbd6;color:var(--tx)}
-.pager button.cur{background:var(--accent);border-color:var(--accent);color:#fff}
-.pager button:disabled{opacity:.35;cursor:default}
-
-/* ================= 阅读层 ================= */
-.reader{position:fixed;inset:0;display:flex;justify-content:center;background:rgba(20,24,31,.42);z-index:60;opacity:0;
-  pointer-events:none;transition:opacity .2s}
-.reader.open{opacity:1;pointer-events:auto}
-.sheet{width:min(1040px,100%);height:100%;background:#fff;
-  box-shadow:0 0 44px rgba(16,24,40,.2);transform:translateY(30px);opacity:.5;
-  transition:transform .24s cubic-bezier(.32,.72,0,1),opacity .24s;display:flex;flex-direction:column}
-.reader.open .sheet{transform:none;opacity:1}
-.rhead{display:flex;align-items:center;gap:9px;padding:12px 22px;border-bottom:1px solid var(--line2);flex:none}
-.rhead .sp{flex:1}
-.rhead button{padding:6px 12px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;
-  color:var(--tx2);background:#fff}
-.rhead button:hover:not(:disabled){border-color:#c3cbd6;color:var(--tx)}
-.rhead button:disabled{opacity:.35;cursor:default}
-.rbody{flex:1;overflow-y:auto;padding:34px 22px 130px;overscroll-behavior:contain}
-.art{max-width:770px;margin:0 auto;line-height:1.95;color:#20242b}
-.art h1{font-size:1.42em;line-height:1.5;margin:0 0 16px;letter-spacing:.2px}
-.art .meta{display:flex;gap:9px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--tx3);
-  padding-bottom:16px;border-bottom:1px solid var(--line2);margin-bottom:20px}
-.art p{margin:0 0 1.02em;text-align:justify;word-break:break-word}
-.loading{padding:80px;text-align:center;color:var(--tx3);font-size:14px;line-height:2}
-.hint{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1f2328;color:#fff;
-  padding:8px 16px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:99}
-.hint.on{opacity:.93}
-</style>
-<link rel="stylesheet" href="editor.css">
+<link rel="stylesheet" href="editor.css?v=2">
+<script src="app.js?v=2" defer></script>
 </head>
 <body>
-
-<aside class="side">
-  <div class="brand">
-    <h1>空白文稿编辑器</h1>
-    <div class="sub" id="brandSub">—</div>
-  </div>
-  <div class="search">
-    <input id="kw" type="text" placeholder="搜索标题 / 摘要 / 标签 / 主题…（按 / 聚焦）" autocomplete="off">
-    <label class="deep"><input type="checkbox" id="deep"><span>含正文全文搜索</span></label>
-  </div>
-  <div class="filters" id="filters"></div>
-  <div class="sfoot">
-    <div class="cnt">命中 <b id="hitN">0</b> 篇</div>
-    <button class="btn-ghost" id="resetAll">清空筛选</button>
-  </div>
-</aside>
-
-<div class="main">
-  <div class="topbar">
-    <div class="res">共 <b id="resN">0</b> 篇 · 第 <b id="resP">1</b> / <b id="resT">1</b> 页</div>
-    <div class="sp"></div>
-    <button class="action" id="newArticle">＋ 新建文稿</button>
-    <button class="action secondary" id="manageFilters">编辑筛选页</button>
-    <button class="action secondary" id="backup">导入 / 导出</button>
-    <label>排序</label>
-    <select id="sort">
-      <option value="default">来源默认序</option>
-      <option value="han-">字数：多 → 少</option>
-      <option value="han+">字数：少 → 多</option>
-      <option value="title">标题：拼音序</option>
-      <option value="src">按来源库归组</option>
-    </select>
-    <label>每页</label>
-    <select id="per">
-      <option>20</option><option selected>50</option><option>100</option><option>200</option>
-    </select>
-    <a class="swapv" id="swapv" href="index.html?v=mobile&rev=blank-editor-1">手机版 ›</a>
-  </div>
-  <div class="crumbs" id="crumbs"></div>
-  <div class="listwrap" id="listwrap"></div>
+<div class="app">
+  <div id="drawerShade" class="drawerShade" hidden></div>
+  <aside class="sidebar" id="sidebar" aria-label="三级目录">
+    <div class="sideHead"><div><h1>文稿目录</h1><span>三级可编辑目录</span></div><button id="closeDrawer" class="icon mobileOnly" aria-label="关闭目录">✕</button></div>
+    <button id="allArticles" class="allButton active">全部文稿 <span id="totalCount">0</span></button>
+    <div class="treeHead"><span>目录</span><button id="addRoot" class="smallButton">＋ 一级目录</button></div>
+    <nav id="tree" class="tree" aria-label="目录树"></nav>
+    <div class="sideFoot"><button id="unfiled" class="allButton">未分类 <span id="unfiledCount">0</span></button><p>本机保存 · 两个项目互不影响</p></div>
+  </aside>
+  <main class="content">
+    <header class="listBar">
+      <button id="openDrawer" class="icon mobileOnly" aria-label="打开目录">☰</button>
+      <div class="listTitle"><h2 id="currentTitle">全部文稿</h2><span id="currentCount">0 篇</span></div>
+      <input id="search" class="search" type="search" placeholder="搜索标题或正文" aria-label="搜索标题或正文">
+      <button id="backupButton" class="subtleButton" title="导入或导出 JSON">导入 / 导出</button>
+      <button id="newArticle" class="primaryButton">＋ 新建文稿</button>
+    </header>
+    <div id="articles" class="articleList" aria-live="polite"></div>
+  </main>
 </div>
-
-<div class="reader" id="reader">
-  <div class="sheet">
-    <div class="rhead">
-      <button id="rPrev">← 上一篇</button>
-      <button id="rNext">下一篇 →</button>
-      <div class="sp"></div>
-      <button id="rEdit">编辑</button>
-      <button id="rDelete">删除</button>
-      <button id="rCopy">复制正文</button>
-      <button id="rFontA">A+</button>
-      <button id="rFontB">A−</button>
-      <button id="rClose">关闭 (Esc)</button>
-    </div>
-    <div class="rbody" id="rbody"></div>
-  </div>
-</div>
-<div class="hint" id="hint"></div>
-
-<script src="app.js" defer></script>
+<section id="editor" class="editor" aria-label="文稿编辑页" hidden>
+  <header class="editorBar">
+    <button id="backEditor" class="icon backButton" aria-label="返回目录">←</button>
+    <input id="titleInput" type="text" placeholder="输入标题" aria-label="文稿标题" maxlength="300">
+    <select id="directorySelect" aria-label="所属目录" title="所属目录"></select>
+    <button id="deleteArticle" class="subtleButton danger" hidden>删除</button>
+    <button id="saveArticle" class="primaryButton">保存</button>
+  </header>
+  <textarea id="bodyInput" class="bodyInput" placeholder="从这里开始写正文……" aria-label="正文" spellcheck="true"></textarea>
+</section>
+<div id="modalHost"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
