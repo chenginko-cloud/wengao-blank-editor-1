@@ -1,0 +1,28 @@
+.action{border:1px solid #2b5cd9;border-radius:8px;background:#2b5cd9;color:white;padding:7px 11px;font-size:13px;white-space:nowrap;cursor:pointer}
+.action.secondary{background:white;color:#2b5cd9}.action:hover{filter:brightness(.95)}
+.manageRow{display:flex;gap:8px;padding:10px 16px;flex-wrap:wrap;border-top:1px solid #eef0f3}
+.top .action{padding:7px 8px;font-size:12px}
+.top .filterBtn{min-width:0}.top .sortSel{max-width:92px}
+.empty .action{margin-top:18px}
+.editorOverlay{position:fixed;inset:0;background:rgba(20,24,31,.58);z-index:120;display:grid;place-items:center;padding:16px}
+.editorPanel{width:min(710px,100%);max-height:min(94vh,960px);overflow:auto;background:#fff;color:#1f2328;border-radius:14px;box-shadow:0 18px 60px #0003;padding:22px;font:14px/1.6 -apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif}
+.editorPanel h2{margin:0 0 6px;font-size:20px}.editorPanel p{color:#5c6570;margin:0 0 15px}
+.editorPanel label{display:block;margin:13px 0 5px;font-weight:600}
+.editorPanel input[type=text],.editorPanel textarea,.editorPanel select{width:100%;padding:9px;border:1px solid #d5dae1;border-radius:8px;background:white;color:#1f2328;font:inherit}
+.editorPanel textarea{min-height:86px;resize:vertical}.editorPanel textarea.bodyField{min-height:220px}
+.editorPanel .two{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.editorPanel .checks{display:flex;flex-wrap:wrap;gap:8px;max-height:130px;overflow:auto;padding:8px;border:1px solid #e5e7eb;border-radius:8px}
+.editorPanel .checks label{display:inline-flex;align-items:center;gap:4px;margin:0;font-weight:400}
+.editorPanel .buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.editorPanel .danger{color:#ae312b;border-color:#e7c4c2}
+.editorPanel .groupRow{border-top:1px solid #e8eaee;padding:12px 0}
+.editorPanel .groupRow h3{margin:0 0 9px;font-size:15px}
+.editorPanel .entry{display:flex;align-items:center;gap:6px;margin:6px 0}
+.editorPanel .entry input{flex:1;min-width:70px}.editorPanel .entry select{width:33%;min-width:85px}
+.editorPanel .entry button{border:1px solid #d5dae1;border-radius:7px;padding:6px 9px;background:white;white-space:nowrap}
+.editorPanel .addRow{display:flex;gap:8px}.editorPanel .addRow input{flex:1}
+.emptyNote{color:#8b95a1;font-size:13px}
+.art .placeholder{color:#8b95a1}
+.reader .rhead{overflow-x:auto}.reader .rhead button{flex:none}
+@media(max-width:620px){.editorPanel{padding:16px;max-height:96vh}.editorPanel .two{grid-template-columns:1fr}.editorPanel .entry{flex-wrap:wrap}.editorPanel .entry select{width:100%}}
+@media(max-width:1120px){.topbar{gap:6px;padding-left:12px;padding-right:12px}.topbar label{display:none}.topbar .action{font-size:12px;padding:6px}}

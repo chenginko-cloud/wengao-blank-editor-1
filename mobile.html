@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232b5cd9'/%3E%3Cg stroke='%23fff' stroke-width='4.5' stroke-linecap='round'%3E%3Cpath d='M17 21h30M17 32h30M17 43h19'/%3E%3C/g%3E%3C/svg%3E">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>空白文稿编辑器 · 手机版</title>
+<script>
+(function(){
+  if(location.protocol!=="http:"&&location.protocol!=="https:")return;
+  if(new URLSearchParams(location.search).get("mode")==="mobile")return;
+  var ua=navigator.userAgent||"";
+  var mobileUA=/Android|iPhone|iPod|iPad|Mobile|HarmonyOS|Tablet|Windows Phone/i.test(ua);
+  var iPadOS=/Macintosh/.test(ua)&&navigator.maxTouchPoints>1;
+  var uaDataMobile=!!(navigator.userAgentData&&navigator.userAgentData.mobile);
+  var coarse=matchMedia("(pointer: coarse)").matches||matchMedia("(any-pointer: coarse)").matches;
+  var mobile=mobileUA||uaDataMobile||iPadOS||innerWidth<820||
+    (coarse&&Math.min(screen.width||9999,screen.height||9999)<1100);
+  if(!mobile)location.replace("desktop.html?rev=blank-editor-1");
+})();
+</script>
+<style>
+:root{
+  --bg:#fff; --bg2:#f6f7f9; --line:#e8eaee; --line2:#f0f2f5;
+  --tx:#1f2328; --tx2:#5c6570; --tx3:#8b95a1;
+  --accent:#2b5cd9; --accent-soft:#eaf0ff;
+  --hd:56px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);
+  font:16px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+body.locked{overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+
+/* ================= 顶栏 ================= */
+.top{position:fixed;left:0;right:0;top:0;height:var(--hd);background:rgba(255,255,255,.94);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;align-items:center;
+  gap:8px;padding:0 10px;z-index:30;padding-top:env(safe-area-inset-top);
+  height:calc(var(--hd) + env(safe-area-inset-top))}
+.top .sp{flex:1}
+.filterBtn{display:flex;align-items:center;gap:8px;padding:7px 12px 7px 10px;border:1px solid var(--line);
+  border-radius:999px;background:#fff;max-width:78%}
+.filterBtn .ic{width:15px;flex:none}
+.filterBtn .ic i{display:block;height:1.6px;background:#3c4656;border-radius:2px;margin:3px 0}
+.filterBtn .tx{font-size:13.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.filterBtn .badge{background:var(--accent);color:#fff;font-size:11.5px;font-weight:600;
+  padding:1px 7px;border-radius:999px;flex:none;font-variant-numeric:tabular-nums}
+.filterBtn.on{border-color:var(--accent);background:var(--accent-soft)}
+.sortSel{border:1px solid var(--line);border-radius:999px;padding:6px 8px;font-size:13px;background:#fff;outline:none}
+
+/* ================= 列表 ================= */
+.list{padding:calc(var(--hd) + env(safe-area-inset-top) + 8px) 16px 90px}
+.stat{margin:6px 0 14px;font-size:12.5px;color:var(--tx3);line-height:1.8}
+.stat b{color:var(--tx2)}
+.it{display:block;width:100%;text-align:left;padding:14px 0;border-bottom:1px solid var(--line2)}
+.it .t{font-size:16px;font-weight:600;line-height:1.5;color:var(--tx)}
+.it .m{margin-top:6px;font-size:12.5px;color:var(--tx3);line-height:1.7;
+  display:flex;flex-wrap:wrap;gap:4px 7px;align-items:center}
+.it .s{margin-top:6px;font-size:13.5px;color:var(--tx2);line-height:1.7;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bdg{display:inline-block;padding:1px 7px;border-radius:5px;font-size:11.5px;font-weight:500;white-space:nowrap}
+.bdg.soft{background:#f1f3f6;color:#5c6570}
+.bdg.dup{background:#fff3e0;color:#b45309}
+.empty{padding:70px 10px;text-align:center;color:var(--tx3);font-size:14px;line-height:2.1}
+.more{display:block;width:100%;margin:22px 0 0;padding:13px;border:1px solid var(--line);
+  border-radius:12px;background:#fff;font-size:15px;color:var(--accent)}
+.more:active{background:var(--accent-soft)}
+
+/* ================= 抽屉 ================= */
+.scrim{position:fixed;inset:0;background:rgba(18,22,29,.42);opacity:0;pointer-events:none;
+  transition:opacity .26s;z-index:50}
+body.drawn .scrim{opacity:1;pointer-events:auto}
+.drawer{position:fixed;left:0;top:0;bottom:0;width:min(88vw,360px);background:#fff;z-index:60;
+  transform:translateX(-101%);transition:transform .28s cubic-bezier(.32,.72,0,1);
+  display:flex;flex-direction:column;box-shadow:6px 0 30px rgba(16,24,40,.16)}
+body.drawn .drawer{transform:none}
+.drawerEdge{position:absolute;right:-14px;top:0;bottom:0;width:30px;z-index:2;
+  pointer-events:none;touch-action:pan-y}
+body.drawn .drawerEdge{pointer-events:auto}
+.drawerEdge::after{content:"";position:absolute;right:11px;top:45%;width:3px;height:42px;
+  border-radius:3px;background:#c3cbd6;opacity:.72}
+.dhead{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;
+  border-bottom:1px solid var(--line2);padding-top:calc(16px + env(safe-area-inset-top))}
+.dhead h2{margin:0;font-size:16px;font-weight:700}
+.dhead .cls{font-size:14px;color:var(--tx3);padding:4px 8px}
+.dsearch{padding:12px 16px 4px}
+.dsearch input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+  background:#fafbfc;outline:none;font-size:15px}
+.dsearch input:focus{border-color:var(--accent);background:#fff}
+.dsearch .deep{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--tx2)}
+.dsearch .deep input{width:16px;height:16px;margin:0}
+.dfilters{flex:1;overflow-y:auto;padding:6px 16px 20px;overscroll-behavior:contain}
+.grp{margin-top:16px}
+.grp>h3{margin:0 0 9px;font-size:11.5px;font-weight:700;color:var(--tx3);letter-spacing:.5px;
+  display:flex;justify-content:space-between;align-items:center}
+.grp>h3 .clr{font-weight:500;color:var(--accent);font-size:12px;visibility:hidden}
+.grp.on>h3 .clr{visibility:visible}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:999px;
+  border:1px solid var(--line);background:#fff;font-size:13px;color:var(--tx2);max-width:100%}
+.chip .n{font-size:11px;color:var(--tx3);font-variant-numeric:tabular-nums}
+.chip.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip.sel .n{color:#c9d8ff}
+.chip.zero{opacity:.34}
+.chip .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.subchips{max-height:186px;overflow-y:auto}
+.dfoot{border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  display:flex;gap:10px;background:#fcfcfd}
+.dfoot .go{flex:1;padding:13px;border-radius:12px;background:var(--accent);color:#fff;
+  font-size:15.5px;font-weight:600;text-align:center}
+.dfoot .rst{padding:13px 16px;border:1px solid var(--line);border-radius:12px;background:#fff;
+  font-size:15px;color:var(--tx2)}
+
+/* ================= 阅读层 ================= */
+.reader{position:fixed;inset:0;background:#fff;z-index:80;display:none;flex-direction:column;
+  transition:transform .24s ease}
+.reader.open{display:flex}
+.reader.drag{transition:none}
+.rhead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line2);
+  flex:none;padding-top:calc(10px + env(safe-area-inset-top));background:#fff}
+.rhead .sp{flex:1}
+.rhead button{padding:7px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;color:var(--tx2);background:#fff}
+.rhead button:disabled{opacity:.35}
+.rbody{flex:1;overflow-y:auto;padding:20px 18px 120px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.art{font-size:17px;line-height:1.95;color:#20242b}
+.art h1{font-size:21px;line-height:1.5;margin:0 0 12px}
+.art .meta{display:flex;gap:7px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--tx3);
+  padding-bottom:14px;border-bottom:1px solid var(--line2);margin-bottom:18px}
+.art p{margin:0 0 1.05em;text-align:justify;word-break:break-word}
+.loading{padding:70px 0;text-align:center;color:var(--tx3);font-size:14px;line-height:2}
+.edge{position:fixed;left:0;top:0;bottom:0;width:26px;z-index:90;opacity:0;pointer-events:none;
+  touch-action:none;display:flex;align-items:center}
+body.reading .edge{opacity:1;pointer-events:auto}
+.edge i{display:block;width:3.5px;height:46px;border-radius:3px;background:#c3cbd6;margin-left:5px;opacity:.75}
+.filterEdge{position:fixed;left:0;top:calc(var(--hd) + env(safe-area-inset-top));bottom:0;
+  width:30px;z-index:45;touch-action:pan-y}
+.filterEdge::after{content:"";position:absolute;left:4px;top:45%;height:42px;width:3px;
+  border-radius:3px;background:#c3cbd6;opacity:.65;pointer-events:none}
+body.drawn .filterEdge,body.reading .filterEdge{pointer-events:none;visibility:hidden}
+.toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);background:#1f2328;color:#fff;
+  padding:9px 17px;border-radius:20px;font-size:13.5px;opacity:0;pointer-events:none;transition:.25s;z-index:99}
+.toast.on{opacity:.94}
+</style>
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+
+<div class="top">
+  <button class="filterBtn" id="openD">
+    <span class="ic"><i></i><i></i><i></i></span>
+    <span class="tx" id="btnTx">筛选与检索</span>
+    <span class="badge" id="btnN">0</span>
+  </button>
+  <div class="sp"></div>
+  <button class="action" id="newArticle">＋ 新建</button>
+  <select class="sortSel" id="sort">
+    <option value="default">默认序</option>
+    <option value="han-">字数多→少</option>
+    <option value="han+">字数少→多</option>
+    <option value="title">标题序</option>
+    <option value="src">按来源</option>
+  </select>
+</div>
+
+<div class="list" id="list"></div>
+<div class="filterEdge" id="filterEdge" aria-hidden="true"></div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer">
+  <div class="drawerEdge" id="drawerEdge" aria-hidden="true"></div>
+  <div class="dhead"><h2>筛选与检索</h2><span style="flex:1"></span>
+    <button class="cls" id="swapv" style="display:none">桌面版 ›</button>
+    <button class="cls" id="closeD">✕</button></div>
+  <div class="dsearch">
+    <input id="kw" type="text" placeholder="搜索标题 / 摘要 / 标签 / 主题…" autocomplete="off">
+    <label class="deep"><input type="checkbox" id="deep"><span>含正文全文搜索</span></label>
+  </div>
+  <div class="dfilters" id="filters"></div>
+  <div class="manageRow"><button class="action secondary" id="manageFilters">编辑筛选页</button> <button class="action secondary" id="backup">导入 / 导出</button></div>
+  <div class="dfoot">
+    <button class="rst" id="resetAll">清空</button>
+    <button class="go" id="applyD">查看 <span id="applyN">0</span> 篇</button>
+  </div>
+</aside>
+
+<div class="reader" id="reader">
+  <div class="rhead">
+    <button id="rClose">‹ 返回</button>
+    <button id="rPrev">上一篇</button>
+    <button id="rNext">下一篇</button>
+    <div class="sp"></div>
+    <button id="rEdit">编辑</button><button id="rDelete">删除</button><button id="rCopy">复制</button>
+  </div>
+  <div class="rbody" id="rbody"></div>
+</div>
+<div class="edge" id="edge"><i></i></div>
+<div class="toast" id="toast"></div>
+
+<script src="app.js" defer></script>
+</body>
+</html>
