@@ -52,9 +52,10 @@ function openDrawer(){$('#sidebar').classList.add('open');$('#drawerShade').hidd
 function chooseDirectory(id){selected=id;render();closeDrawer();}
 function renderTree(){
   function nodes(parent,level){return children(parent).map(d=>{
-    const kids=children(d.id).length,opened=expanded.has(d.id);
+    // First-level folders stay expanded so the second level is always visible.
+    const kids=children(d.id).length,opened=level===0||expanded.has(d.id);
     return `<div class="treeNode ${selected===d.id?'selected':''}" style="padding-left:${level*17}px" data-node="${esc(d.id)}">
-      <button class="twisty" data-twist="${esc(d.id)}" aria-label="${kids?(opened?'收起':'展开')+' '+d.name:'无子目录'}">${kids?(opened?'▾':'▸'):'·'}</button>
+      ${level===0?`<span class="twisty" aria-hidden="true">${kids?'▾':'·'}</span>`:`<button class="twisty" data-twist="${esc(d.id)}" aria-label="${kids?(opened?'收起':'展开')+' '+d.name:'无子目录'}">${kids?(opened?'▾':'▸'):'·'}</button>`}
       <button class="nodeName" data-select="${esc(d.id)}" title="${esc(d.name)}">${esc(d.name)}</button>
       <span class="nodeActions">${level<2?`<button data-add="${esc(d.id)}" title="新增下一级" aria-label="在${esc(d.name)}下新增目录">＋</button>`:''}
       <button data-rename="${esc(d.id)}" title="重命名" aria-label="重命名${esc(d.name)}">✎</button>
