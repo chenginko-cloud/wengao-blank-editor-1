@@ -6,8 +6,9 @@
 <meta name="theme-color" content="#f6f7f9">
 <title>空白文稿编辑器</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232b5cd9'/%3E%3Cg stroke='%23fff' stroke-width='4.5' stroke-linecap='round'%3E%3Cpath d='M17 21h30M17 32h30M17 43h19'/%3E%3C/g%3E%3C/svg%3E">
-<link rel="stylesheet" href="editor.css?v=4">
-<script src="app.js?v=2" defer></script>
+<link rel="stylesheet" href="editor.css?v=5">
+<script src="app.js?v=5" defer></script>
+<script src="sync.js?v=1" defer></script>
 </head>
 <body>
 <div class="app">
@@ -17,13 +18,14 @@
     <button id="allArticles" class="allButton active">全部文稿 <span id="totalCount">0</span></button>
     <div class="treeHead"><span>目录</span><button id="addRoot" class="smallButton">＋ 一级目录</button></div>
     <nav id="tree" class="tree" aria-label="目录树"></nav>
-    <div class="sideFoot"><button id="unfiled" class="allButton">未分类 <span id="unfiledCount">0</span></button><p>本机保存 · 两个项目互不影响</p></div>
+    <div class="sideFoot"><button id="unfiled" class="allButton">未分类 <span id="unfiledCount">0</span></button><p>本机保存 · 可连接多端同步</p></div>
   </aside>
   <main class="content">
     <header class="listBar">
       <button id="openDrawer" class="icon mobileOnly" aria-label="打开目录">☰</button>
       <div class="listTitle"><h2 id="currentTitle">全部文稿</h2><span id="currentCount">0 篇</span></div>
       <input id="search" class="search" type="search" placeholder="搜索标题或正文" aria-label="搜索标题或正文">
+      <button id="syncButton" class="subtleButton syncButton" type="button" aria-label="跨设备同步：未连接">☁ 未连接</button>
       <button id="backupButton" class="subtleButton" title="导入或导出 JSON">导入 / 导出</button>
       <button id="newArticle" class="primaryButton">＋ 新建文稿</button>
     </header>

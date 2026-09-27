@@ -38,7 +38,8 @@ function valid(input){
 }
 try{const saved=localStorage.getItem(STORAGE);if(saved){const parsed=JSON.parse(saved);data=valid(parsed);if(parsed.version===1)localStorage.setItem(STORAGE,JSON.stringify(data));}}
 catch(error){alert('本机数据读取失败：'+error.message);}
-function persist(change){const before=JSON.stringify(data);change();try{localStorage.setItem(STORAGE,JSON.stringify(data));return true;}
+function persist(change,fromCloud=false){const before=JSON.stringify(data);change();try{localStorage.setItem(STORAGE,JSON.stringify(data));
+    if(!fromCloud)window.EditorBridge?.onLocalChanged?.();return true;}
   catch(error){data=JSON.parse(before);alert('保存失败，请先导出备份并检查浏览器存储空间：'+error.message);return false;}}
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
 const folder=id=>data.directories.find(d=>d.id===id);
@@ -117,7 +118,7 @@ function openEditor(id=null){const a=id?data.articles.find(item=>item.id===id):n
   $('#titleInput').focus();
 }
 function closeEditor(force=false){if(!force&&editorState()!==initialEditor&&!confirm('修改尚未保存，确定返回目录吗？'))return;
-  $('#editor').hidden=true;document.body.style.overflow='';currentId=null;render();}
+  $('#editor').hidden=true;document.body.style.overflow='';currentId=null;render();window.EditorBridge?.onEditorClosed?.();}
 $('#backEditor').onclick=()=>closeEditor();
 $('#saveArticle').onclick=()=>{const title=$('#titleInput').value.trim(),body=$('#bodyInput').value,dir=$('#directorySelect').value;
   if(!title){$('#titleInput').focus();toast('请先填写标题');return;}
@@ -128,7 +129,7 @@ $('#saveArticle').onclick=()=>{const title=$('#titleInput').value.trim(),body=$(
 $('#deleteArticle').onclick=()=>{const a=data.articles.find(item=>item.id===currentId);if(!a||!confirm(`确定删除《${a.title}》？此操作无法撤销。`))return;
   if(persist(()=>{data.articles=data.articles.filter(item=>item.id!==currentId);})){initialEditor=editorState();closeEditor(true);toast('文稿已删除');}
 };
-function backups(){const host=modal('导入 / 导出','文稿仅保存在此浏览器。导入会覆盖此项目的现有数据；两个项目可通过 JSON 文件迁移内容。',
+function backups(){const host=modal('导入 / 导出','可用 JSON 文件备份或迁移文稿。导入会覆盖此项目的本机数据，并在连接时同步到其他设备。',
   '<div class="modalActions"><button class="primaryButton" id="exportData">导出 JSON</button><label class="subtleButton fileLabel" for="importData">导入 JSON</label><input type="file" accept=".json,application/json" id="importData"><button class="subtleButton" id="closeBackup">关闭</button></div>');
   $('#closeBackup').onclick=()=>host.innerHTML='';
   $('#exportData').onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
@@ -140,6 +141,13 @@ function backups(){const host=modal('导入 / 导出','文稿仅保存在此浏�
   };
 }
 $('#backupButton').onclick=backups;
+window.EditorBridge={storageKey:STORAGE,getData:()=>JSON.parse(JSON.stringify(data)),
+  isEditorOpen:()=>!$('#editor').hidden,
+  isEditorDirty:()=>!$('#editor').hidden&&editorState()!==initialEditor,
+  applyCloud:incoming=>{const replacement=valid(JSON.parse(JSON.stringify(incoming)));
+    if(!persist(()=>{data=replacement;},true))return false;
+    selected='';query='';$('#search').value='';expanded=new Set();render();return true;},
+  onLocalChanged:null,onEditorClosed:null};
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&!$('#editor').hidden){e.preventDefault();$('#saveArticle').click();}
   if(e.key==='Escape'){if(!$('#modalHost .modalShade')&& !$('#editor').hidden)closeEditor();else if($('#modalHost .modalShade'))$('#modalHost').innerHTML='';else closeDrawer();}

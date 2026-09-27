@@ -28,3 +28,14 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}button:focus-vis
  .editor{inset:0;width:100vw;height:100dvh;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
  .bodyInput{min-height:0;padding-bottom:calc(80px + env(safe-area-inset-bottom))}
 }
+
+/* Gist synchronization controls */
+.syncButton[data-state="synced"]{color:#14725e;border-color:#bbe3d9;background:#f1faf7}
+.syncButton[data-state="pending"],.syncButton[data-state="working"]{color:#94621b;border-color:#e9d8ae;background:#fffaf0}
+.syncButton[data-state="conflict"],.syncButton[data-state="error"]{color:#af423b;border-color:#edc9c6;background:#fff7f6}
+.syncHelp{margin-top:12px;padding:12px;border-radius:8px;background:#f7f9fc;color:#5c6777;font-size:12.5px;line-height:1.65}
+.syncHelp strong{color:#343d49}.syncForm label{display:flex;align-items:center;gap:7px;margin:11px 0;font-size:13px;color:#546171}
+.syncForm input[type=password]{width:100%;border:1px solid #d4dbe4;border-radius:8px;padding:11px;outline:none}
+.syncForm input[type=password]:focus{border-color:var(--blue)}
+.syncStatus{color:#526071;line-height:1.7;margin:10px 0}.syncError{color:#af423b;font-size:13px;min-height:18px}
+@media(max-width:800px){.listBar .syncButton{font-size:12px;padding:7px}}
