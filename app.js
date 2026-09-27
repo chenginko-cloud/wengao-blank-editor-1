@@ -5,7 +5,7 @@ const $=selector=>document.querySelector(selector);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=()=>globalThis.crypto?.randomUUID?.()||'id-'+Date.now()+'-'+Math.random().toString(36).slice(2);
 const blank=()=>({version:2,directories:[],articles:[]});
-let data=blank(),selected='',expanded=new Set(),query='',currentId=null,initialEditor='',toastTimer,editorCloseTimer;
+let data=blank(),selected='',expanded=new Set(),query='',currentId=null,readerId=null,editorReturnToReader=false,initialEditor='',toastTimer,editorCloseTimer;
 
 function migrateV1(old){
   const next=blank(),dims=old.dims||{},find=(key,id)=>(dims[key]||[]).find(v=>v.id===id)?.name||'';
@@ -103,24 +103,36 @@ $('#tree').onclick=e=>{const action=e.target.closest('button');if(!action)return
   if(action.dataset.rename)editDirectory('',folder(action.dataset.rename));
   if(action.dataset.remove)removeDirectory(action.dataset.remove);
 };
-$('#articles').onclick=e=>{const row=e.target.closest('[data-article]');if(row)openEditor(row.dataset.article);else if(e.target.closest('[data-new]'))openEditor();};
+$('#articles').onclick=e=>{const row=e.target.closest('[data-article]');if(row)openReader(row.dataset.article);else if(e.target.closest('[data-new]'))openEditor();};
 $('#addRoot').onclick=()=>editDirectory();$('#allArticles').onclick=()=>chooseDirectory('');$('#unfiled').onclick=()=>chooseDirectory('unfiled');
 $('#openDrawer').onclick=openDrawer;$('#closeDrawer').onclick=closeDrawer;$('#drawerShade').onclick=closeDrawer;
 $('#search').oninput=e=>{query=e.target.value.trim();renderList();};
 $('#newArticle').onclick=()=>openEditor();
+function renderReader(){const a=data.articles.find(item=>item.id===readerId);if(!a){closeReader();return;}
+  $('#readTitle').textContent=a.title||'未命名文稿';$('#readBody').textContent=a.body||'';}
+function openReader(id){if(!data.articles.some(item=>item.id===id))return;
+  readerId=id;renderReader();$('#reader').hidden=false;$('#readerBody').scrollTop=0;document.body.style.overflow='hidden';
+  $('#backReader').focus();}
+function closeReader(){$('#reader').hidden=true;readerId=null;document.body.style.overflow='';}
+$('#backReader').onclick=closeReader;
+$('#editFromReader').onclick=()=>{if(readerId)openEditor(readerId,true);};
 function directoryOptions(chosen){function walk(parent,level){return children(parent).map(d=>`<option value="${esc(d.id)}" ${d.id===chosen?'selected':''}>${'　'.repeat(level)}${esc(d.name)}</option>`+walk(d.id,level+1)).join('');}
   return `<option value="" ${chosen?'':'selected'}>未分类</option>`+walk('',0);
 }
 function editorState(){return JSON.stringify({title:$('#titleInput').value,body:$('#bodyInput').value,dir:$('#directorySelect').value});}
-function openEditor(id=null){const a=id?data.articles.find(item=>item.id===id):null;if(id&&!a)return;
+function openEditor(id=null,fromReader=false){const a=id?data.articles.find(item=>item.id===id):null;if(id&&!a)return;
   clearTimeout(editorCloseTimer);$('#editor').classList.remove('leaving');
-  currentId=a?.id||null;$('#editor').hidden=false;$('#titleInput').value=a?.title||'';$('#bodyInput').value=a?.body||'';
+  editorReturnToReader=fromReader;currentId=a?.id||null;$('#editor').hidden=false;$('#titleInput').value=a?.title||'';$('#bodyInput').value=a?.body||'';
   const dir=a?.dir||(selected&&selected!=='unfiled'?selected:'');$('#directorySelect').innerHTML=directoryOptions(dir);
   $('#deleteArticle').hidden=!a;initialEditor=editorState();document.body.style.overflow='hidden';
   $('#titleInput').focus();
 }
-function closeEditor(force=false){if(!force&&editorState()!==initialEditor&&!confirm('修改尚未保存，确定返回目录吗？'))return;
-  const finish=()=>{$('#editor').hidden=true;$('#editor').classList.remove('leaving');document.body.style.overflow='';currentId=null;render();window.EditorBridge?.onEditorClosed?.();};
+function closeEditor(force=false){if(!force&&editorState()!==initialEditor&&!confirm('修改尚未保存，确定返回吗？'))return;
+  const finish=()=>{$('#editor').hidden=true;$('#editor').classList.remove('leaving');currentId=null;render();
+    if(editorReturnToReader&&!$('#reader').hidden){
+      if(data.articles.some(item=>item.id===readerId))renderReader();else closeReader();
+    }
+    editorReturnToReader=false;document.body.style.overflow=$('#reader').hidden?'':'hidden';window.EditorBridge?.onEditorClosed?.();};
   if((document.body.classList.contains('mobilePage')||matchMedia('(max-width:800px)').matches)&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
     $('#editor').classList.add('leaving');clearTimeout(editorCloseTimer);editorCloseTimer=setTimeout(finish,220);
   }else finish();}
@@ -129,7 +141,7 @@ $('#saveArticle').onclick=()=>{const title=$('#titleInput').value.trim(),body=$(
   if(!title){$('#titleInput').focus();toast('请先填写标题');return;}
   if(!persist(()=>{const a=data.articles.find(item=>item.id===currentId);if(a){a.title=title;a.body=body;a.dir=dir;}
     else{currentId=uid();data.articles.unshift({id:currentId,title,body,dir});}}))return;
-  initialEditor=editorState();$('#deleteArticle').hidden=false;render();toast('已保存');
+  initialEditor=editorState();$('#deleteArticle').hidden=false;render();if(editorReturnToReader)renderReader();toast('已保存');
 };
 $('#deleteArticle').onclick=()=>{const a=data.articles.find(item=>item.id===currentId);if(!a||!confirm(`确定删除《${a.title}》？此操作无法撤销。`))return;
   if(persist(()=>{data.articles=data.articles.filter(item=>item.id!==currentId);})){initialEditor=editorState();closeEditor(true);toast('文稿已删除');}
@@ -151,11 +163,11 @@ window.EditorBridge={storageKey:STORAGE,getData:()=>JSON.parse(JSON.stringify(da
   isEditorDirty:()=>!$('#editor').hidden&&editorState()!==initialEditor,
   applyCloud:incoming=>{const replacement=valid(JSON.parse(JSON.stringify(incoming)));
     if(!persist(()=>{data=replacement;},true))return false;
-    selected='';query='';$('#search').value='';expanded=new Set();render();return true;},
+    selected='';query='';$('#search').value='';expanded=new Set();render();if(!$('#reader').hidden)renderReader();return true;},
   onLocalChanged:null,onEditorClosed:null};
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&!$('#editor').hidden){e.preventDefault();$('#saveArticle').click();}
-  if(e.key==='Escape'){if(!$('#modalHost .modalShade')&& !$('#editor').hidden)closeEditor();else if($('#modalHost .modalShade'))$('#modalHost').innerHTML='';else closeDrawer();}
+  if(e.key==='Escape'){if($('#modalHost .modalShade'))$('#modalHost').innerHTML='';else if(!$('#editor').hidden)closeEditor();else if(!$('#reader').hidden)closeReader();else closeDrawer();}
 });
 // Restore the original mobile page gestures without blocking vertical scrolling.
 // The editor gesture starts at the edge so selecting and moving the cursor in the text stays natural.
@@ -163,8 +175,9 @@ let pageSwipe=null;
 document.addEventListener('touchstart',e=>{
   pageSwipe=null;
   if(e.touches.length!==1||!(document.body.classList.contains('mobilePage')||matchMedia('(max-width:800px)').matches)||$('#modalHost .modalShade'))return;
-  const touch=e.touches[0],view=!$('#editor').hidden?'editor':$('#sidebar').classList.contains('open')?'directory':'list';
-  if(view==='editor'&&(touch.clientX>32||$('#editor').classList.contains('leaving')))return;
+  const touch=e.touches[0],view=!$('#editor').hidden?'editor':!$('#reader').hidden?'reader':$('#sidebar').classList.contains('open')?'directory':'list';
+  if((view==='editor'||view==='reader')&&touch.clientX>32)return;
+  if(view==='editor'&&$('#editor').classList.contains('leaving'))return;
   if(e.target.closest('input,textarea,select,[contenteditable="true"]')&&view!=='editor')return;
   pageSwipe={x:touch.clientX,y:touch.clientY,view};
 },{passive:true});
@@ -174,7 +187,8 @@ document.addEventListener('touchend',e=>{
   const dx=touch.clientX-x,dy=touch.clientY-y;
   if(Math.abs(dx)<65||Math.abs(dx)<Math.abs(dy)*1.25||$('#modalHost .modalShade'))return;
   if(view==='directory'&&dx<0&&$('#sidebar').classList.contains('open')){e.preventDefault();closeDrawer();}
-  else if(view==='list'&&dx>0&&$('#editor').hidden&&!$('#sidebar').classList.contains('open')){e.preventDefault();openDrawer();}
+  else if(view==='list'&&dx>0&&$('#editor').hidden&&$('#reader').hidden&&!$('#sidebar').classList.contains('open')){e.preventDefault();openDrawer();}
+  else if(view==='reader'&&dx>0&&$('#editor').hidden&&!$('#reader').hidden){e.preventDefault();closeReader();}
   else if(view==='editor'&&dx>0&&!$('#editor').hidden){e.preventDefault();closeEditor();}
 },{passive:false});
 document.addEventListener('touchcancel',()=>{pageSwipe=null;},{passive:true});

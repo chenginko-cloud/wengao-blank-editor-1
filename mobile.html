@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#f6f7f9">
 <title>空白文稿编辑器</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232b5cd9'/%3E%3Cg stroke='%23fff' stroke-width='4.5' stroke-linecap='round'%3E%3Cpath d='M17 21h30M17 32h30M17 43h19'/%3E%3C/g%3E%3C/svg%3E">
-<link rel="stylesheet" href="editor.css?v=6">
-<script src="app.js?v=7" defer></script>
+<link rel="stylesheet" href="editor.css?v=8">
+<script src="app.js?v=8" defer></script>
 <script src="sync.js?v=1" defer></script>
 </head>
 <body class="mobilePage">
@@ -32,9 +32,17 @@
     <div id="articles" class="articleList" aria-live="polite"></div>
   </main>
 </div>
+<section id="reader" class="reader" aria-label="文稿阅读页" hidden>
+  <header class="readerBar">
+    <button id="backReader" class="icon backButton" aria-label="返回文稿列表">←</button>
+    <h1 id="readTitle"></h1>
+    <button id="editFromReader" class="primaryButton">编辑</button>
+  </header>
+  <div id="readerBody" class="readerBody" tabindex="0" aria-label="文稿正文"><article id="readBody" class="readText"></article></div>
+</section>
 <section id="editor" class="editor" aria-label="文稿编辑页" hidden>
   <header class="editorBar">
-    <button id="backEditor" class="icon backButton" aria-label="返回目录">←</button>
+    <button id="backEditor" class="icon backButton" aria-label="返回阅读页或列表">←</button>
     <input id="titleInput" type="text" placeholder="输入标题" aria-label="文稿标题" maxlength="300">
     <select id="directorySelect" aria-label="所属目录" title="所属目录"></select>
     <button id="deleteArticle" class="subtleButton danger" hidden>删除</button>
