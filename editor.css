@@ -10,7 +10,7 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}button:focus-vis
 /* Phone and tablet views use three separate, full-viewport surfaces. */
 .mobilePage .mobileOnly{display:inline-flex}
 .mobilePage .app,.mobilePage .content{width:100vw;height:100dvh;min-height:0}
-.mobilePage .sidebar{position:fixed;z-index:30;inset:0;width:100vw;max-width:none;height:100dvh;border:0;box-shadow:none;transform:translateX(-100%);transition:none;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+.mobilePage .sidebar{position:fixed;z-index:30;inset:0;width:100vw;max-width:none;height:100dvh;border:0;box-shadow:none;transform:translateX(-100%);transition:transform .22s ease;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
 .mobilePage .sidebar.open{transform:none}
 .mobilePage .drawerShade{display:none!important}
 .mobilePage .treeNode .nodeActions{opacity:1}
@@ -21,13 +21,18 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}button:focus-vis
 @media(max-width:800px){
  html,body{overflow:hidden}
  .app,.content{width:100vw;height:100dvh;min-height:0}
- .sidebar{inset:0;width:100vw;max-width:none;height:100dvh;border:0;box-shadow:none;transform:translateX(-100%);transition:none;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+ .sidebar{inset:0;width:100vw;max-width:none;height:100dvh;border:0;box-shadow:none;transform:translateX(-100%);transition:transform .22s ease;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
  .drawerShade{display:none!important}
  .listBar{padding-top:calc(10px + env(safe-area-inset-top))}
  .articleList{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
  .editor{inset:0;width:100vw;height:100dvh;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
  .bodyInput{min-height:0;padding-bottom:calc(80px + env(safe-area-inset-bottom))}
 }
+@media(max-width:800px){.editor:not([hidden]){animation:editorEnter .22s ease both}.editor.leaving{animation:editorLeave .22s ease both}}
+.mobilePage .editor:not([hidden]){animation:editorEnter .22s ease both}.mobilePage .editor.leaving:not([hidden]){animation:editorLeave .22s ease both}
+@keyframes editorEnter{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes editorLeave{from{transform:translateX(0)}to{transform:translateX(100%)}}
+@media(prefers-reduced-motion:reduce){.sidebar,.mobilePage .sidebar{transition:none!important}.editor:not([hidden]),.mobilePage .editor:not([hidden]){animation:none!important}}
 
 /* Gist synchronization controls */
 .syncButton[data-state="synced"]{color:#14725e;border-color:#bbe3d9;background:#f1faf7}

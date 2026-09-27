@@ -5,7 +5,7 @@ const $=selector=>document.querySelector(selector);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=()=>globalThis.crypto?.randomUUID?.()||'id-'+Date.now()+'-'+Math.random().toString(36).slice(2);
 const blank=()=>({version:2,directories:[],articles:[]});
-let data=blank(),selected='',expanded=new Set(),query='',currentId=null,initialEditor='',toastTimer;
+let data=blank(),selected='',expanded=new Set(),query='',currentId=null,initialEditor='',toastTimer,editorCloseTimer;
 
 function migrateV1(old){
   const next=blank(),dims=old.dims||{},find=(key,id)=>(dims[key]||[]).find(v=>v.id===id)?.name||'';
@@ -112,13 +112,17 @@ function directoryOptions(chosen){function walk(parent,level){return children(pa
 }
 function editorState(){return JSON.stringify({title:$('#titleInput').value,body:$('#bodyInput').value,dir:$('#directorySelect').value});}
 function openEditor(id=null){const a=id?data.articles.find(item=>item.id===id):null;if(id&&!a)return;
+  clearTimeout(editorCloseTimer);$('#editor').classList.remove('leaving');
   currentId=a?.id||null;$('#editor').hidden=false;$('#titleInput').value=a?.title||'';$('#bodyInput').value=a?.body||'';
   const dir=a?.dir||(selected&&selected!=='unfiled'?selected:'');$('#directorySelect').innerHTML=directoryOptions(dir);
   $('#deleteArticle').hidden=!a;initialEditor=editorState();document.body.style.overflow='hidden';
   $('#titleInput').focus();
 }
 function closeEditor(force=false){if(!force&&editorState()!==initialEditor&&!confirm('修改尚未保存，确定返回目录吗？'))return;
-  $('#editor').hidden=true;document.body.style.overflow='';currentId=null;render();window.EditorBridge?.onEditorClosed?.();}
+  const finish=()=>{$('#editor').hidden=true;$('#editor').classList.remove('leaving');document.body.style.overflow='';currentId=null;render();window.EditorBridge?.onEditorClosed?.();};
+  if((document.body.classList.contains('mobilePage')||matchMedia('(max-width:800px)').matches)&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    $('#editor').classList.add('leaving');clearTimeout(editorCloseTimer);editorCloseTimer=setTimeout(finish,220);
+  }else finish();}
 $('#backEditor').onclick=()=>closeEditor();
 $('#saveArticle').onclick=()=>{const title=$('#titleInput').value.trim(),body=$('#bodyInput').value,dir=$('#directorySelect').value;
   if(!title){$('#titleInput').focus();toast('请先填写标题');return;}
@@ -152,4 +156,25 @@ document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&!$('#editor').hidden){e.preventDefault();$('#saveArticle').click();}
   if(e.key==='Escape'){if(!$('#modalHost .modalShade')&& !$('#editor').hidden)closeEditor();else if($('#modalHost .modalShade'))$('#modalHost').innerHTML='';else closeDrawer();}
 });
+// Restore the original mobile page gestures without blocking vertical scrolling.
+// The editor gesture starts at the edge so selecting and moving the cursor in the text stays natural.
+let pageSwipe=null;
+document.addEventListener('touchstart',e=>{
+  pageSwipe=null;
+  if(e.touches.length!==1||!(document.body.classList.contains('mobilePage')||matchMedia('(max-width:800px)').matches)||$('#modalHost .modalShade'))return;
+  const touch=e.touches[0],view=!$('#editor').hidden?'editor':$('#sidebar').classList.contains('open')?'directory':'list';
+  if(view==='editor'&&(touch.clientX>32||$('#editor').classList.contains('leaving')))return;
+  if(e.target.closest('input,textarea,select,[contenteditable="true"]')&&view!=='editor')return;
+  pageSwipe={x:touch.clientX,y:touch.clientY,view};
+},{passive:true});
+document.addEventListener('touchend',e=>{
+  if(!pageSwipe||!e.changedTouches.length)return;
+  const {x,y,view}=pageSwipe,touch=e.changedTouches[0];pageSwipe=null;
+  const dx=touch.clientX-x,dy=touch.clientY-y;
+  if(Math.abs(dx)<65||Math.abs(dx)<Math.abs(dy)*1.25||$('#modalHost .modalShade'))return;
+  if(view==='directory'&&dx<0&&$('#sidebar').classList.contains('open')){e.preventDefault();closeDrawer();}
+  else if(view==='list'&&dx>0&&$('#editor').hidden&&!$('#sidebar').classList.contains('open')){e.preventDefault();openDrawer();}
+  else if(view==='editor'&&dx>0&&!$('#editor').hidden){e.preventDefault();closeEditor();}
+},{passive:false});
+document.addEventListener('touchcancel',()=>{pageSwipe=null;},{passive:true});
 render();
