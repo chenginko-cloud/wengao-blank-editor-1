@@ -1,0 +1,6 @@
+{
+  "name": "wengao-blank-editor-1",
+  "private": true,
+  "scripts": {"build": "python build_html.py", "test": "node test_editor.js && node test_sync.js"},
+  "devDependencies": {"jsdom": "26.1.0"}
+}

@@ -1,46 +1,20 @@
+(function () {
 'use strict';
 // Data is private to this browser and this GitHub Pages project path.
 const STORAGE='wengao-blank-editor-v1:'+location.pathname.split('/')[1];
 const $=selector=>document.querySelector(selector);
-const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const uid=()=>globalThis.crypto?.randomUUID?.()||'id-'+Date.now()+'-'+Math.random().toString(36).slice(2);
-const blank=()=>({version:2,directories:[],articles:[]});
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const {uid,blank,valid}=window.EditorModel;
 let data=blank(),selected='',expanded=new Set(),query='',currentId=null,readerId=null,editorReturnToReader=false,initialEditor='',toastTimer,editorCloseTimer;
 
-function migrateV1(old){
-  const next=blank(),dims=old.dims||{},find=(key,id)=>(dims[key]||[]).find(v=>v.id===id)?.name||'';
-  function make(names){let parent='',id='';for(const name of names){if(!name)continue;
-    let node=next.directories.find(v=>v.parent===parent&&v.name===name);
-    if(!node){node={id:uid(),name,parent};next.directories.push(node);}
-    id=node.id;parent=id;
-  }return id;}
-  for(const s of dims.src||[])make([s.name]);
-  for(const article of old.articles||[]){
-    const src=find('src',article.src),big=find('big',article.big);
-    const firstTopic=Array.isArray(article.topic)?article.topic[0]:article.topic;
-    const topic=find('topic',firstTopic);
-    const path=src||big||topic?[src||'未分类',big||(topic?'其他':''),topic]:[];
-    next.articles.push({...article,id:article.id||uid(),title:String(article.title||''),body:String(article.body||''),dir:make(path)});
-  }
-  // Preserve unused old primary categories in the new tree as well.
-  if((dims.big||[]).length){const other='未分类';for(const b of dims.big)make([other,b.name]);}
-  for(const t of dims.topic||[]){const big=Object.entries(old.topicOfBig||{}).find(([,arr])=>arr?.includes(t.name))?.[0]||'其他';make(['未分类',big,t.name]);}
-  return next;
-}
-function valid(input){
-  if(input?.version===1&&Array.isArray(input.articles)&&input.dims)return migrateV1(input);
-  if(input?.version!==2||!Array.isArray(input.directories)||!Array.isArray(input.articles))throw Error('文件不是文稿编辑器备份');
-  const ids=new Set();for(const d of input.directories){if(!d||typeof d.id!=='string'||typeof d.name!=='string'||typeof d.parent!=='string'||ids.has(d.id))throw Error('目录数据有误');ids.add(d.id);}
-  for(const d of input.directories)if(d.parent&&!ids.has(d.parent))throw Error('目录引用缺失');
-  const map=new Map(input.directories.map(d=>[d.id,d]));for(const d of input.directories){let p=d,seen=new Set();while(p){if(seen.has(p.id))throw Error('目录存在循环');seen.add(p.id);if(seen.size>3)throw Error('目录不能超过三级');p=map.get(p.parent);}}
-  const articles=new Set();for(const a of input.articles){if(!a||typeof a.id!=='string'||typeof a.title!=='string'||typeof a.body!=='string'||articles.has(a.id))throw Error('文稿数据有误');articles.add(a.id);if(a.dir&&!ids.has(a.dir))throw Error('文稿目录不存在');}
-  return input;
-}
 try{const saved=localStorage.getItem(STORAGE);if(saved){const parsed=JSON.parse(saved);data=valid(parsed);if(parsed.version===1)localStorage.setItem(STORAGE,JSON.stringify(data));}}
 catch(error){alert('本机数据读取失败：'+error.message);}
-function persist(change,fromCloud=false){const before=JSON.stringify(data);change();try{localStorage.setItem(STORAGE,JSON.stringify(data));
-    if(!fromCloud)window.EditorBridge?.onLocalChanged?.();return true;}
-  catch(error){data=JSON.parse(before);alert('保存失败，请先导出备份并检查浏览器存储空间：'+error.message);return false;}}
+function persist(change,fromCloud=false){const before=JSON.stringify(data);
+  try{change();localStorage.setItem(STORAGE,JSON.stringify(data));}
+  catch(error){data=JSON.parse(before);alert('保存失败，请先导出备份并检查浏览器存储空间：'+error.message);return false;}
+  // 通知同步失败时，本机已经保存的数据仍应保持一致。
+  if(!fromCloud){try{window.EditorBridge?.onLocalChanged?.();}catch(error){toast('本机已保存，同步通知失败，请重试同步');}}
+  return true;}
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
 const folder=id=>data.directories.find(d=>d.id===id);
 const children=parent=>data.directories.filter(d=>d.parent===parent);
@@ -55,7 +29,7 @@ function renderTree(){
     // First-level folders stay expanded so the second level is always visible.
     const kids=children(d.id).length,opened=level===0||expanded.has(d.id);
     return `<div class="treeNode ${selected===d.id?'selected':''}" style="padding-left:${level*17}px" data-node="${esc(d.id)}">
-      ${level===0?`<span class="twisty" aria-hidden="true">${kids?'▾':'·'}</span>`:`<button class="twisty" data-twist="${esc(d.id)}" aria-label="${kids?(opened?'收起':'展开')+' '+d.name:'无子目录'}">${kids?(opened?'▾':'▸'):'·'}</button>`}
+      ${level===0?`<span class="twisty" aria-hidden="true">${kids?'▾':'·'}</span>`:`<button class="twisty" data-twist="${esc(d.id)}" aria-label="${kids?(opened?'收起':'展开')+' '+esc(d.name):'无子目录'}">${kids?(opened?'▾':'▸'):'·'}</button>`}
       <button class="nodeName" data-select="${esc(d.id)}" title="${esc(d.name)}">${esc(d.name)}</button>
       <span class="nodeActions">${level<2?`<button data-add="${esc(d.id)}" title="新增下一级" aria-label="在${esc(d.name)}下新增目录">＋</button>`:''}
       <button data-rename="${esc(d.id)}" title="重命名" aria-label="重命名${esc(d.name)}">✎</button>
@@ -193,3 +167,5 @@ document.addEventListener('touchend',e=>{
 },{passive:false});
 document.addEventListener('touchcancel',()=>{pageSwipe=null;},{passive:true});
 render();
+
+})();
